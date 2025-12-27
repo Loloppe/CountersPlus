@@ -9,14 +9,13 @@ using System.Linq;
 using UnityEngine;
 using VRUIControls;
 using Zenject;
-using static CountersPlus.Utils.Accessors;
 
 namespace CountersPlus.UI.FlowCoordinators
 {
     public class CountersPlusSettingsFlowCoordinator : FlowCoordinator
     {
         public readonly Vector3 MAIN_SCREEN_OFFSET = new Vector3(0, -4, 0);
-        
+
 
         [Inject] public List<ConfigModel> AllConfigModels;
         [Inject] private CanvasUtility canvasUtility;
@@ -38,7 +37,6 @@ namespace CountersPlus.UI.FlowCoordinators
         [Inject] private SettingsManager settingsManager;
         [Inject] private SongPreviewPlayer songPreviewPlayer;
 
-        private HashSet<string> persistentScenes = new HashSet<string>();
         private bool hasTransitioned = false;
 
         protected override void DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling)
@@ -60,18 +58,15 @@ namespace CountersPlus.UI.FlowCoordinators
 
             hasTransitioned = true;
 
-            persistentScenes = GSMPersistentScenes(ref gameScenesManager); // Get our hashset of persistent scenes
-
             // Make sure our menu persists through the transition
-            persistentScenes.Add("MenuCore");
+            gameScenesManager._neverUnloadScenes.Add("MenuCore");
 
-            var tutorialSceneSetup = MTHTutorialScenesSetup(ref menuTransitionsHelper); // Grab the scene transition setup data
-            tutorialSceneSetup.Init(playerDataModel.playerData.playerSpecificSettings, environmentsListModel, new GameplayAdditionalInformation());
+            menuTransitionsHelper._tutorialScenesTransitionSetupData.Init(playerDataModel.playerData.playerSpecificSettings, environmentsListModel, new GameplayAdditionalInformation());
 
             menuEnvironmentManager.ShowEnvironmentType(MenuEnvironmentManager.MenuEnvironmentType.None);
 
             // We're actually transitioning to the Tutorial sequence, but disabling the tutorial itself from starting.
-            gameScenesManager.PushScenes(tutorialSceneSetup, 0.25f, null, (_) =>
+            gameScenesManager.PushScenes(menuTransitionsHelper._tutorialScenesTransitionSetupData, 0.25f, null, (_) =>
             {
                 // god this makes me want to retire from beat saber modding
                 static void DisableAllNonImportantObjects(Transform original, Transform source, string[] importantObjects)
@@ -182,7 +177,7 @@ namespace CountersPlus.UI.FlowCoordinators
             gameScenesManager.PopScenes(0.25f, null, (_) =>
             {
                 // Unmark these scenes as persistent so they won't bother us in-game.
-                persistentScenes.Remove("MenuCore");
+                gameScenesManager._neverUnloadScenes.Remove("MenuCore");
                 menuEnvironmentManager.ShowEnvironmentType(MenuEnvironmentManager.MenuEnvironmentType.Default);
                 fadeInOutController.FadeIn();
                 songPreviewPlayer.CrossfadeToDefault();
