@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BeatSaberModdingTools.Tasks" Version="2.0.0-beta7">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="0Harmony">
       <Private>False</Private>
       <HintPath>$(BeatSaberDir)\Libs\0Harmony.dll</HintPath>
