@@ -28,6 +28,8 @@ namespace CountersPlus.UI.FlowCoordinators
         [Inject] private VRInputModule vrInputModule;
         [Inject] private MenuShockwave menuShockwave;
         [Inject] private PlayerDataModel playerDataModel;
+        [Inject] private MainFlowCoordinator mainFlowCoordinator;
+        [Inject] private EnvironmentsListModel environmentsListModel;
 
         [Inject] private CountersPlusCreditsViewController credits;
         [Inject] private CountersPlusBlankViewController blank;
@@ -39,26 +41,17 @@ namespace CountersPlus.UI.FlowCoordinators
         private HashSet<string> persistentScenes = new HashSet<string>();
         private bool hasTransitioned = false;
 
-        private ScreenSystem screenSystem;
-
         protected override void DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling)
         {
-            
             if (addedToHierarchy)
             {
                 showBackButton = true;
                 SetTitle("Counters+");
             }
 
-            screenSystem = IPA.Utilities.ReflectionUtil.GetField<ScreenSystem, FlowCoordinator>(this, "_screenSystem");
-            //screenSystem.backButtonWasPressedEvent += HandleBackButtonWasPressed;
-
             ProvideInitialViewControllers(mainScreenNavigation, credits, null, settingsSelection);
 
             RefreshAllMockCounters();
-
-            // temp fix for menu env showing in settings
-            GameObject.Find("RootContainer/Wrapper/MenuEnvironmentManager/DefaultMenuEnvironment").SetActive(false);
         }
 
         public void DoSceneTransition(Action callback = null)
@@ -73,7 +66,7 @@ namespace CountersPlus.UI.FlowCoordinators
             persistentScenes.Add("MenuCore");
 
             var tutorialSceneSetup = MTHTutorialScenesSetup(ref menuTransitionsHelper); // Grab the scene transition setup data
-            tutorialSceneSetup.Init(playerDataModel.playerData.playerSpecificSettings);
+            tutorialSceneSetup.Init(playerDataModel.playerData.playerSpecificSettings, environmentsListModel, new GameplayAdditionalInformation());
 
             menuEnvironmentManager.ShowEnvironmentType(MenuEnvironmentManager.MenuEnvironmentType.None);
 
@@ -81,7 +74,7 @@ namespace CountersPlus.UI.FlowCoordinators
             gameScenesManager.PushScenes(tutorialSceneSetup, 0.25f, null, (_) =>
             {
                 // god this makes me want to retire from beat saber modding
-                static void DisableAllNonImportantObjects(Transform original, Transform source, IEnumerable<string> importantObjects)
+                static void DisableAllNonImportantObjects(Transform original, Transform source, string[] importantObjects)
                 {
                     foreach (Transform child in source)
                     {
@@ -119,7 +112,7 @@ namespace CountersPlus.UI.FlowCoordinators
                 songPreviewPlayer.CrossfadeToDefault();
 
                 // When not in FPFC, disable the Menu input, and re-enable the Tutorial menu input
-                if (!Environment.GetCommandLineArgs().Any(x => x.ToLowerInvariant() == "fpfc") &&
+                if (!Environment.GetCommandLineArgs().Any(x => x.Equals("fpfc", StringComparison.OrdinalIgnoreCase)) &&
                     !Resources.FindObjectsOfTypeAll<FirstPersonFlyingController>().Any(x => x.isActiveAndEnabled))
                 {
                     vrInputModule.gameObject.SetActive(false);
@@ -170,8 +163,7 @@ namespace CountersPlus.UI.FlowCoordinators
         {
             hasTransitioned = false;
             canvasUtility.ClearAllText();
-            screenSystem.backButtonWasPressedEvent -= HandleBackButtonWasPressed;
-            BeatSaberUI.MainFlowCoordinator.DismissFlowCoordinator(this, TransitionToMenu, ViewController.AnimationDirection.Horizontal, true);
+            mainFlowCoordinator.DismissFlowCoordinator(this, TransitionToMenu, ViewController.AnimationDirection.Horizontal, true);
         }
 
         private void HandleBackButtonWasPressed() => BackButtonWasPressed(topViewController);
